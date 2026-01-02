@@ -35,16 +35,10 @@ on:
   push: 
     branches: [main]
     tags: ["v*"]
- WORKFLOW='name: Docker Build and Push
-
-on:
-  push:  
-    branches: [main]
-    tags: ["v*"]
-  workflow_dispatch:  
+  workflow_dispatch: 
 
 jobs:
-  build:  
+  build: 
     uses: Struxel-Dynamics/struxel-devops-tools/.github/workflows/docker-build-push.yml@main
     secrets: 
       DOCKER_USERNAME: ${{ secrets. DOCKER_USERNAME }}
@@ -63,11 +57,11 @@ for REPO in "${REPOS[@]}"; do
   if git clone -q --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/Struxel-Dynamics/$REPO.git" "$TEMP" 2>/dev/null; then
     cd "$TEMP"
     git config user.name "Struxel DevOps Bot"
-    git config user.email "devops@struxeldynamics.com"
+    git config user. email "devops@struxeldynamics.com"
     
     mkdir -p .github/workflows
     echo "$WORKFLOW" > .github/workflows/docker. yml
-    git add .github/workflows/docker. yml
+    git add .github/workflows/docker.yml
     
     if git diff --staged --quiet; then
       echo "⚠️  No changes"
@@ -92,7 +86,7 @@ done
 echo ""
 echo "=========================================="
 echo "✅ Successfully deployed:  $SUCCESS"
-echo "❌ Failed:  $FAILED"
+echo "❌ Failed: $FAILED"
 echo "=========================================="
 
 exit 0
