@@ -35,12 +35,18 @@ on:
   push: 
     branches: [main]
     tags: ["v*"]
-  workflow_dispatch: 
+ WORKFLOW='name: Docker Build and Push
+
+on:
+  push:  
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:  
 
 jobs:
-  build: 
+  build:  
     uses: Struxel-Dynamics/struxel-devops-tools/.github/workflows/docker-build-push.yml@main
-    secrets:
+    secrets: 
       DOCKER_USERNAME: ${{ secrets. DOCKER_USERNAME }}
       DOCKER_PASSWORD: ${{ secrets. DOCKER_PASSWORD }}'
 
