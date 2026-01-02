@@ -1,0 +1,17 @@
+name: Add Dockerfiles to All Repos
+
+on:
+  workflow_dispatch: 
+
+jobs:
+  add-dockerfiles:
+    runs-on:  ubuntu-latest
+    steps: 
+      - uses: actions/checkout@v4
+      
+      - name: Add Dockerfiles to repositories
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          chmod +x scripts/add-dockerfiles.sh
+          ./scripts/add-dockerfiles.sh
