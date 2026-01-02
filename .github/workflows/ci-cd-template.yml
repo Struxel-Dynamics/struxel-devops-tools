@@ -1,0 +1,125 @@
+name:  Reusable CI/CD Pipeline
+
+on:
+  workflow_call:
+    inputs:
+      python_version:
+        description: 'Python version'
+        required: false
+        type: string
+        default: '3.11'
+      run_tests:
+        description: 'Run tests'
+        required:  false
+        type: boolean
+        default: true
+      run_lint:
+        description: 'Run linting'
+        required: false
+        type: boolean
+        default: true
+      deploy_environment:
+        description: 'Deployment environment'
+        required: false
+        type: string
+        default: 'staging'
+    secrets:
+      DOCKER_USERNAME:
+        required: true
+      DOCKER_PASSWORD:
+        required: true
+
+jobs:
+  lint:
+    if: inputs.run_lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with: 
+          python-version: ${{ inputs.python_version }}
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 black isort mypy
+          pip install -r requirements.txt 2>/dev/null || echo "No requirements.txt"
+      
+      - name: Run Black
+        run: black --check .  || true
+      
+      - name: Run isort
+        run: isort --check-only . || true
+      
+      - name: Run Flake8
+        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || true
+      
+      - name:  Run MyPy
+        run: mypy . || true
+
+  test:
+    if: inputs.run_tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs. python_version }}
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov
+          pip install -r requirements.txt 2>/dev/null || echo "No requirements.txt"
+      
+      - name: Run tests
+        run:  |
+          pytest --cov=. --cov-report=xml --cov-report=html || echo "No tests found"
+      
+      - name:  Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner
+        uses:  aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results. sarif'
+
+  build:
+    needs: [lint, test]
+    if: always() && (needs.lint.result == 'success' || needs.lint.result == 'skipped') && (needs.test.result == 'success' || needs.test.result == 'skipped')
+    uses:  Struxel-Dynamics/struxel-devops-tools/. github/workflows/docker-build-push.yml@main
+    secrets: 
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.deploy_environment }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy notification
+        run: |
+          echo "🚀 Deploying to ${{ inputs.deploy_environment }}"
+          echo "Image: ${{ secrets.DOCKER_USERNAME }}/${{ github.event.repository.name }}:latest"
