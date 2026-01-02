@@ -1,16 +1,17 @@
 name: Deploy to All Repos
 
-on:
+on: 
   workflow_dispatch: 
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses:  actions/checkout@v4
+      
       - name: Deploy workflows
         env:
-          GH_TOKEN:  ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets. PAT_TOKEN }}
         run: |
           chmod +x scripts/deploy-workflow.sh
           ./scripts/deploy-workflow.sh
