@@ -1,0 +1,17 @@
+name: Setup CI/CD Pipelines
+
+on:
+  workflow_dispatch: 
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses:  actions/checkout@v4
+      
+      - name:  Setup CI/CD for all repos
+        env:
+          GH_TOKEN: ${{ secrets. PAT_TOKEN }}
+        run: |
+          chmod +x scripts/setup-cicd.sh
+          ./scripts/setup-cicd.sh
