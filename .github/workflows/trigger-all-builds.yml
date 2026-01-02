@@ -8,9 +8,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name:  Trigger builds
+      
+      - name:  Trigger all Docker builds
         env:
-          GH_TOKEN:  ${{ secrets.PAT_TOKEN }}
-        run: |
+          GITHUB_TOKEN: ${{ secrets. PAT_TOKEN }}
+        run:  |
           chmod +x scripts/trigger-builds.sh
           ./scripts/trigger-builds.sh
