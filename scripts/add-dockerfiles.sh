@@ -36,7 +36,7 @@ WORKDIR /app
 # Copy all application files
 COPY .  .
 
-# Install dependencies if requirements.txt exists
+# Install dependencies if requirements. txt exists
 RUN if [ -f requirements.txt ]; then \
       pip install --no-cache-dir -r requirements.txt; \
     fi
@@ -78,7 +78,7 @@ for REPO in "${REPOS[@]}"; do
   
   if git clone -q --depth 1 "https://x-access-token:${GH_TOKEN}@github. com/Struxel-Dynamics/$REPO.git" "$TEMP" 2>/dev/null; then
     cd "$TEMP"
-    git config user.name "Struxel DevOps Bot"
+    git config user. name "Struxel DevOps Bot"
     git config user.email "devops@struxeldynamics.com"
     
     echo "$DOCKERFILE" > Dockerfile
@@ -88,7 +88,7 @@ for REPO in "${REPOS[@]}"; do
     if git diff --staged --quiet; then
       echo "⚠️  No changes"
     else
-      if git commit -q -m "Fix Dockerfile to handle missing requirements.txt" && git push -q 2>/dev/null; then
+      if git commit -q -m "Fix Dockerfile to handle missing requirements. txt" && git push -q 2>/dev/null; then
         echo "✅"
         ((SUCCESS++))
       else
