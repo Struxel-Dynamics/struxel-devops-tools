@@ -1,163 +1,95 @@
 #!/bin/bash
-set +e
 
-if [ -z "$GH_TOKEN" ]; then
-  echo "Error: GH_TOKEN not set"
-  exit 1
-fi
+# Script to add Dockerfiles to repositories that don't have them
+# This version includes a fix for handling missing requirements.txt files
 
-REPOS=(
-  "struxel-platform-api" "struxel-export-worker" "struxel-infra"
-  "struxel-admin-ui" "struxel-core" "struxel-bias-engine"
-  "struxel-governance-framework" "struxel-predictive-module"
-  "struxel-vendor-analyzer" "struxel-compliance-monitor"
-  "struxel-data-validator" "curriculum-training"
-  "struxel-api-gateway" "struxel-audit-logger" "struxel-identity-manager"
-  "struxel-predictive-compliance" "struxel-risk-forecast"
-  "struxel-policy-drift" "struxel-contributor-risk"
-  "struxel-audit-simulator" "struxel-credential-verifier"
-  "struxel-consent-tracker" "struxel-data-lineage"
-  "struxel-prompt-risk" "struxel-model-registry" "struxel-sla-monitor"
-  "struxel-task-runner" "struxel-rubric-checker"
-  "struxel-audit-artifact-kit" "struxel-badge-issuer"
-  "struxel-sla-notifier" "struxel-client-intake-helper"
-  "struxel-dataset-cataloger" "struxel-prompt-sanitizer"
-  "struxel-fintech-stack" "struxel-healthtech-suite"
-  "struxel-hrtech-suite" "struxel-govtech-suite" "struxel-edtech-suite"
-  "struxel-retail-analytics-suite" "struxel-insurtech-suite"
-  "struxel-manufacturtech-suite" "struxel-legaltech-suite"
-  "struxel-energy-utilities-suite"
-)
+set -e
 
-DOCKERFILE='# Multi-stage build for Python application
-FROM python:3.11-slim as builder
+# Function to create a Python Dockerfile with conditional requirements.txt handling
+create_python_dockerfile() {
+    cat > Dockerfile << 'EOF'
+FROM python:3.9-slim
 
 WORKDIR /app
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
+# Copy requirements.txt if it exists, otherwise create an empty one
+COPY requirements.tx[t] ./ 2>/dev/null || true
 
-# Copy requirements first for better caching
-COPY requirements.txt* ./
-RUN pip install --user --no-cache-dir -r requirements.txt 2>/dev/null || echo "No requirements.txt found"
+# Install dependencies only if requirements.txt exists and is not empty
+RUN if [ -f requirements.txt ] && [ -s requirements.txt ]; then \
+        pip install --no-cache-dir -r requirements.txt; \
+    fi
 
-# Production stage
-FROM python:3.11-slim
-
-WORKDIR /app
-
-# Copy installed packages from builder
-COPY --from=builder /root/.local /root/.local
-
-# Copy application code
+# Copy the rest of the application
 COPY . .
 
-# Make sure scripts are executable
-RUN chmod +x *.sh 2>/dev/null || true
+# Default command (override as needed)
+CMD ["python", "app.py"]
+EOF
+}
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1
-ENV PATH=/root/.local/bin:$PATH
+# Function to create a Node.js Dockerfile
+create_node_dockerfile() {
+    cat > Dockerfile << 'EOF'
+FROM node:16-alpine
 
-# Expose port (adjust as needed)
-EXPOSE 8000
+WORKDIR /app
 
-# Default command (adjust based on your app)
-CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-'
+# Copy package files if they exist
+COPY package*.json ./ 2>/dev/null || true
 
-DOCKERIGNORE='__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-.env
-.venv
-env/
-venv/
-ENV/
-.git/
-.github/
-.gitignore
-*.md
-.DS_Store
-*.log
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.mypy_cache/
-.idea/
-.vscode/
-'
+# Install dependencies if package.json exists
+RUN if [ -f package.json ]; then \
+        npm install; \
+    fi
 
-SUCCESS=0
-SKIPPED=0
-FAILED=0
+# Copy the rest of the application
+COPY . .
 
-echo "🚀 Adding Dockerfiles to repositories..."
-echo ""
+# Expose port
+EXPOSE 3000
 
-for REPO in "${REPOS[@]}"; do
-  printf "%-45s" "📦 Processing $REPO..."
-  TEMP=$(mktemp -d)
-  
-  if git clone -q --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/Struxel-Dynamics/$REPO.git" "$TEMP" 2>/dev/null; then
-    cd "$TEMP"
-    
-    # Check if Dockerfile already exists
-    if [ -f "Dockerfile" ]; then
-      echo "⚠️  Dockerfile exists"
-      ((SKIPPED++))
+# Default command (override as needed)
+CMD ["npm", "start"]
+EOF
+}
+
+# Function to create a generic Dockerfile
+create_generic_dockerfile() {
+    cat > Dockerfile << 'EOF'
+FROM ubuntu:20.04
+
+WORKDIR /app
+
+# Update and install basic dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy application files
+COPY . .
+
+# Default command
+CMD ["/bin/bash"]
+EOF
+}
+
+# Main function to detect project type and create appropriate Dockerfile
+main() {
+    if [ -f "requirements.txt" ] || [ -f "setup.py" ] || [ -f "*.py" ]; then
+        echo "Python project detected. Creating Python Dockerfile..."
+        create_python_dockerfile
+    elif [ -f "package.json" ]; then
+        echo "Node.js project detected. Creating Node.js Dockerfile..."
+        create_node_dockerfile
     else
-      git config user.name "Struxel DevOps Bot"
-      git config user.email "devops@struxeldynamics.com"
-      
-      echo "$DOCKERFILE" > Dockerfile
-      echo "$DOCKERIGNORE" > .dockerignore
-      
-      git add Dockerfile .dockerignore
-      
-      if git commit -q -m "Add Dockerfile and .dockerignore for containerization" && git push -q 2>/dev/null; then
-        echo "✅ Added"
-        ((SUCCESS++))
-      else
-        echo "❌ Failed"
-        ((FAILED++))
-      fi
+        echo "Generic project detected. Creating generic Dockerfile..."
+        create_generic_dockerfile
     fi
     
-    cd /
-  else
-    echo "❌ Clone failed"
-    ((FAILED++))
-  fi
-  
-  rm -rf "$TEMP"
-done
+    echo "Dockerfile created successfully!"
+}
 
-echo ""
-echo "=========================================="
-echo "✅ Successfully added: $SUCCESS"
-echo "⚠️  Already have Dockerfile: $SKIPPED"
-echo "❌ Failed: $FAILED"
-echo "=========================================="
-
-exit 0
+# Run main function
+main
