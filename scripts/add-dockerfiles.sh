@@ -1,95 +1,110 @@
 #!/bin/bash
+set +e
 
-# Script to add Dockerfiles to repositories that don't have them
-# This version includes a fix for handling missing requirements.txt files
+if [ -z "$GH_TOKEN" ]; then
+  echo "Error: GH_TOKEN not set"
+  exit 1
+fi
 
-set -e
+REPOS=(
+  "struxel-platform-api" "struxel-export-worker" "struxel-infra"
+  "struxel-admin-ui" "struxel-core" "struxel-bias-engine"
+  "struxel-governance-framework" "struxel-predictive-module"
+  "struxel-vendor-analyzer" "struxel-compliance-monitor"
+  "struxel-data-validator" "curriculum-training"
+  "struxel-api-gateway" "struxel-audit-logger" "struxel-identity-manager"
+  "struxel-predictive-compliance" "struxel-risk-forecast"
+  "struxel-policy-drift" "struxel-contributor-risk"
+  "struxel-audit-simulator" "struxel-credential-verifier"
+  "struxel-consent-tracker" "struxel-data-lineage"
+  "struxel-prompt-risk" "struxel-model-registry" "struxel-sla-monitor"
+  "struxel-task-runner" "struxel-rubric-checker"
+  "struxel-audit-artifact-kit" "struxel-badge-issuer"
+  "struxel-sla-notifier" "struxel-client-intake-helper"
+  "struxel-dataset-cataloger" "struxel-prompt-sanitizer"
+  "struxel-fintech-stack" "struxel-healthtech-suite"
+  "struxel-hrtech-suite" "struxel-govtech-suite" "struxel-edtech-suite"
+  "struxel-retail-analytics-suite" "struxel-insurtech-suite"
+  "struxel-manufacturtech-suite" "struxel-legaltech-suite"
+  "struxel-energy-utilities-suite"
+)
 
-# Function to create a Python Dockerfile with conditional requirements.txt handling
-create_python_dockerfile() {
-    cat > Dockerfile << 'EOF'
-FROM python:3.9-slim
-
-WORKDIR /app
-
-# Copy requirements.txt if it exists, otherwise create an empty one
-COPY requirements.tx[t] ./ 2>/dev/null || true
-
-# Install dependencies only if requirements.txt exists and is not empty
-RUN if [ -f requirements.txt ] && [ -s requirements.txt ]; then \
-        pip install --no-cache-dir -r requirements.txt; \
-    fi
-
-# Copy the rest of the application
-COPY . .
-
-# Default command (override as needed)
-CMD ["python", "app.py"]
-EOF
-}
-
-# Function to create a Node.js Dockerfile
-create_node_dockerfile() {
-    cat > Dockerfile << 'EOF'
-FROM node:16-alpine
+DOCKERFILE='FROM python:3.11-slim
 
 WORKDIR /app
 
-# Copy package files if they exist
-COPY package*.json ./ 2>/dev/null || true
+# Copy all application files
+COPY .  .
 
-# Install dependencies if package.json exists
-RUN if [ -f package.json ]; then \
-        npm install; \
+# Install dependencies if requirements.txt exists
+RUN if [ -f requirements.txt ]; then \
+      pip install --no-cache-dir -r requirements.txt; \
     fi
 
-# Copy the rest of the application
-COPY . .
+# Make scripts executable
+RUN chmod +x *.sh 2>/dev/null || true
+
+# Environment variables
+ENV PYTHONUNBUFFERED=1
 
 # Expose port
-EXPOSE 3000
-
-# Default command (override as needed)
-CMD ["npm", "start"]
-EOF
-}
-
-# Function to create a generic Dockerfile
-create_generic_dockerfile() {
-    cat > Dockerfile << 'EOF'
-FROM ubuntu:20.04
-
-WORKDIR /app
-
-# Update and install basic dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    wget \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy application files
-COPY . .
+EXPOSE 8000
 
 # Default command
-CMD ["/bin/bash"]
-EOF
-}
+CMD ["python", "-m", "http.server", "8000"]
+'
 
-# Main function to detect project type and create appropriate Dockerfile
-main() {
-    if [ -f "requirements.txt" ] || [ -f "setup.py" ] || [ -f "*.py" ]; then
-        echo "Python project detected. Creating Python Dockerfile..."
-        create_python_dockerfile
-    elif [ -f "package.json" ]; then
-        echo "Node.js project detected. Creating Node.js Dockerfile..."
-        create_node_dockerfile
-    else
-        echo "Generic project detected. Creating generic Dockerfile..."
-        create_generic_dockerfile
-    fi
+DOCKERIGNORE='__pycache__
+*.pyc
+*. pyo
+.git
+.github
+.env
+.venv
+venv/
+*. md
+.DS_Store
+'
+
+SUCCESS=0
+FAILED=0
+
+echo "🚀 Fixing Dockerfiles in all repositories..."
+echo ""
+
+for REPO in "${REPOS[@]}"; do
+  printf "%-45s" "📦 $REPO..."
+  TEMP=$(mktemp -d)
+  
+  if git clone -q --depth 1 "https://x-access-token:${GH_TOKEN}@github. com/Struxel-Dynamics/$REPO.git" "$TEMP" 2>/dev/null; then
+    cd "$TEMP"
+    git config user.name "Struxel DevOps Bot"
+    git config user.email "devops@struxeldynamics.com"
     
-    echo "Dockerfile created successfully!"
-}
+    echo "$DOCKERFILE" > Dockerfile
+    echo "$DOCKERIGNORE" > .dockerignore
+    git add Dockerfile .dockerignore
+    
+    if git diff --staged --quiet; then
+      echo "⚠️  No changes"
+    else
+      if git commit -q -m "Fix Dockerfile to handle missing requirements.txt" && git push -q 2>/dev/null; then
+        echo "✅"
+        ((SUCCESS++))
+      else
+        echo "❌"
+        ((FAILED++))
+      fi
+    fi
+    cd /
+  else
+    echo "❌"
+    ((FAILED++))
+  fi
+  
+  rm -rf "$TEMP"
+done
 
-# Run main function
-main
+echo ""
+echo "✅ Success:  $SUCCESS | ❌ Failed: $FAILED"
+exit 0
