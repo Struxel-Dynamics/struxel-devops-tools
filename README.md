@@ -122,20 +122,16 @@ docker build -t struxel-devops-tools .
 Pass your GitHub token as an environment variable:
 
 ```bash
-docker run -e GITHUB_TOKEN=your_token_here struxel-devops-tools
+docker run -it -e GITHUB_TOKEN=your_token_here struxel-devops-tools
 ```
 
-Or run interactively:
+Or run interactively without a token (it will prompt you):
 
 ```bash
 docker run -it struxel-devops-tools
 ```
 
-The default command shows the help message. You can override the default behavior by passing arguments:
-
-```bash
-docker run -e GITHUB_TOKEN=your_token_here struxel-devops-tools --help
-```
+**Note**: The `-it` flags are required because the tool is interactive and may prompt for input.
 
 ## 📖 Documentation
 

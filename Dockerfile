@@ -20,8 +20,5 @@ COPY verify-dockerhub-secrets.py .
 # Switch to non-root user
 USER appuser
 
-# Set the entrypoint to run the Python script
-ENTRYPOINT ["python3", "verify-dockerhub-secrets.py"]
-
-# Default command (can be overridden)
-CMD ["--help"]
+# Set the command to run the Python script
+CMD ["python3", "verify-dockerhub-secrets.py"]
