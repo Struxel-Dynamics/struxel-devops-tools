@@ -12,7 +12,7 @@ from typing import List, Dict, Tuple, Optional
 
 # Configuration
 ORG = "Struxel-Dynamics"
-REQUIRED_SECRETS = ["DOCKERHUB_USERNAME", "DOCKERHUB_TOKEN"]
+REQUIRED_SECRETS = ["DOCKER_USERNAME", "DOCKER_PASSWORD"]
 
 # Repositories that need Docker Hub secrets
 REPOS = [
