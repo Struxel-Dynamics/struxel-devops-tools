@@ -1,0 +1,41 @@
+# Git files
+.git
+.gitignore
+.github
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+
+# Documentation (not needed in container)
+docs/
+README.md
+LICENSE
+
+# Scripts (not needed in container)
+scripts/
+
+# Secrets
+*.token
+*.key
+.secrets/
+secrets.json

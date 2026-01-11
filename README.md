@@ -107,6 +107,32 @@ After successful builds, view images at:
 - Docker Hub: https://hub.docker.com/u/cyncarter11
 - Specific repo: https://hub.docker.com/r/cyncarter11/<repo-name>
 
+## 🐳 Docker Usage
+
+This repository includes a Dockerfile for running the `verify-dockerhub-secrets.py` tool in a containerized environment.
+
+### Build the Docker Image
+
+```bash
+docker build -t struxel-devops-tools .
+```
+
+### Run with Docker
+
+Pass your GitHub token as an environment variable:
+
+```bash
+docker run -it -e GITHUB_TOKEN=your_token_here struxel-devops-tools
+```
+
+Or run interactively without a token (it will prompt you):
+
+```bash
+docker run -it struxel-devops-tools
+```
+
+**Note**: The `-it` flags are required because the tool is interactive and may prompt for input.
+
 ## 📖 Documentation
 
 See [docs/DOCKER_WORKFLOW_SETUP.md](docs/DOCKER_WORKFLOW_SETUP.md) for complete documentation.
